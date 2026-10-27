@@ -6,25 +6,48 @@ A small Python function packaged for [Fission](https://fission.io), used to try 
 - `requirements.txt` - dependencies, vendored into the archive at build time (`humanize`, pure python)
 - `build.sh` - builds `dist/test-package-<version>.zip`, its `.sha256`, and `dist/package.yaml`
 - `fission/package.yaml.tmpl` - template for the Fission Package, Function and HTTPTrigger
-- `.github/workflows/release.yml` - builds on every push and pull request; on a `v*` tag it also publishes a GitHub release
+- `scripts/prune-dev-releases.sh` - deletes old development pre-releases (see below)
+- `.github/workflows/release.yml` - builds on every push and pull request, and publishes a release or pre-release (see below)
 
-## Releasing
+## What gets published
 
-Push a tag:
+| Event | Version | Result |
+|---|---|---|
+| pull request | `ci-<sha>` | build only, nothing published |
+| push to `main` | `dev-<short sha>` | a GitHub **pre-release** with the assets below, then old dev pre-releases are pruned |
+| push a `v*` tag | the tag, e.g. `v0.1.0` | a normal release with the assets below |
 
-```bash
-git tag v0.1.0 && git push origin v0.1.0
-```
-
-The workflow builds the archive and creates a release with three assets:
+Every build has its own URL and its own checksum, so a Package pointing at a build never changes underneath you.
 
 | Asset | What it is |
 |---|---|
-| `test-package-v0.1.0.zip` | `main.py` plus the vendored dependencies at the zip root |
-| `test-package-v0.1.0.zip.sha256` | the checksum |
+| `test-package-<version>.zip` | `main.py` plus the vendored dependencies at the zip root |
+| `test-package-<version>.zip.sha256` | the checksum |
 | `package.yaml` | a Fission `Package` (URL of the zip and its sha256), `Function` (`main.main`, newdeploy, scale to zero) and `HTTPTrigger` (`/test-package`) |
 
-Apply `package.yaml` to the cluster with `kubectl apply -f`. The URL is the release asset, so the repository has to be public for the cluster to fetch it without credentials.
+The URL is the release asset, so the repository has to be public for the cluster to fetch it without credentials.
+
+## Development workflow
+
+1. Edit and try it locally: run `main()` directly, or `./build.sh v0.0.0-local` and import `main` from the unpacked zip.
+2. Push to `main`. About a minute later there is a `dev-<sha>` pre-release.
+3. Pull the `package.yaml` you want and apply it:
+
+   ```bash
+   gh release list --repo cwilko/test_package             # newest first; dev builds are marked Pre-release
+   gh release download dev-1a2b3c4 --repo cwilko/test_package --pattern package.yaml --output package.yaml
+   kubectl apply -f package.yaml
+   ```
+
+4. When it's good, tag a real release: `git tag v0.2.0 && git push origin v0.2.0`.
+
+### Pruning
+
+Pruning is automatic. Each push to `main` publishes its `dev-<sha>` pre-release and then runs `scripts/prune-dev-releases.sh`, which keeps the newest `KEEP_DEV_RELEASES` (5, set in the workflow) and deletes the rest together with their tags. It only ever selects pre-releases whose tag starts with `dev-`; `v*` releases (including `v*-rc` pre-releases) are never touched.
+
+Because old dev builds disappear, a Package that still points at a pruned `dev-<sha>` URL can't fetch its code the next time Fission starts a pod for it. Apply a newer `package.yaml`, or tag a `v*` release for anything that has to stay deployed.
+
+To prune by hand, or to keep a different number: `scripts/prune-dev-releases.sh 3`.
 
 ## Building locally
 
