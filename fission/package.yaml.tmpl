@@ -1,0 +1,52 @@
+# Fission resources for this package. build.sh fills in the placeholders; the release workflow attaches the result to
+# each GitHub release as package.yaml.
+apiVersion: fission.io/v1
+kind: Package
+metadata:
+  name: __NAME__
+  namespace: __NAMESPACE__
+spec:
+  environment:
+    name: __ENVIRONMENT__
+    namespace: __NAMESPACE__
+  deployment:
+    type: url
+    url: __URL__
+    checksum:
+      type: sha256
+      sum: __SHA256__
+---
+apiVersion: fission.io/v1
+kind: Function
+metadata:
+  name: __NAME__
+  namespace: __NAMESPACE__
+spec:
+  environment:
+    name: __ENVIRONMENT__
+    namespace: __NAMESPACE__
+  package:
+    packageref:
+      name: __NAME__
+      namespace: __NAMESPACE__
+    functionName: main.main
+  idletimeout: 60
+  InvokeStrategy:
+    StrategyType: execution
+    ExecutionStrategy:
+      ExecutorType: newdeploy
+      MinScale: 0
+      MaxScale: 2
+      SpecializationTimeout: 120
+---
+apiVersion: fission.io/v1
+kind: HTTPTrigger
+metadata:
+  name: __NAME__
+  namespace: __NAMESPACE__
+spec:
+  relativeurl: /__NAME__
+  method: GET
+  functionref:
+    type: name
+    name: __NAME__
