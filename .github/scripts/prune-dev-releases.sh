@@ -1,7 +1,7 @@
 #!/bin/bash
 # Deletes all but the newest <keep> development pre-releases (tag dev-*) together with their tags. Only pre-releases whose
 # tag starts with "dev-" are ever selected: v* releases are never touched.
-# Usage: scripts/prune-dev-releases.sh <keep>      (needs gh, authenticated for the repository)
+# Usage: .github/scripts/prune-dev-releases.sh <keep>      (needs gh, authenticated for the repository)
 set -euo pipefail
 
 KEEP=${1:?usage: prune-dev-releases.sh <number of dev pre-releases to keep>}

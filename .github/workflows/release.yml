@@ -48,6 +48,12 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: ./build.sh "$VERSION"
 
+      # a Fission deployment manifest for the zip above
+      - name: Build Fission package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: .github/scripts/build-fission-package.sh "$VERSION"
+
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -64,4 +70,4 @@ jobs:
         run: |
           gh release create "$VERSION" dist/* --target "$GITHUB_SHA" --prerelease --title "$VERSION" \
             --notes "Development build of $GITHUB_SHA"
-          ./scripts/prune-dev-releases.sh "$KEEP_DEV_RELEASES"
+          ./.github/scripts/prune-dev-releases.sh "$KEEP_DEV_RELEASES"

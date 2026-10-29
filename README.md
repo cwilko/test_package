@@ -4,10 +4,14 @@ A small Python function packaged for [Fission](https://fission.io), used to try 
 
 - `main.py` - the function (`main.main`)
 - `requirements.txt` - dependencies, vendored into the archive at build time (`humanize`, pure python)
-- `build.sh` - builds `dist/test-package-<version>.zip`, its `.sha256`, and `dist/package.yaml`
-- `fission/package.yaml.tmpl` - template for the Fission Package, Function and HTTPTrigger
-- `scripts/prune-dev-releases.sh` - deletes old development pre-releases (see below)
+- `build.sh` - builds `dist/test-package-<version>.zip` and its `.sha256`: the plain package, with no Fission deployment config in it
+
+Release automation lives under `.github/`, apart from the package itself:
+
 - `.github/workflows/release.yml` - builds on every push and pull request, and publishes a release or pre-release (see below)
+- `.github/scripts/build-fission-package.sh` - renders `dist/package.yaml` from the zip and checksum that `build.sh` produced
+- `.github/fission/package.yaml.tmpl` - template for the Fission Package, Function and HTTPTrigger
+- `.github/scripts/prune-dev-releases.sh` - deletes old development pre-releases (see below)
 
 ## What gets published
 
@@ -23,7 +27,7 @@ Every build has its own URL and its own checksum, so a Package pointing at a bui
 |---|---|
 | `test-package-<version>.zip` | `main.py` plus the vendored dependencies at the zip root |
 | `test-package-<version>.zip.sha256` | the checksum |
-| `package.yaml` | a Fission `Package` (URL of the zip and its sha256), `Function` (`main.main`, newdeploy, scale to zero) and `HTTPTrigger` (`/test-package`) |
+| `package.yaml` | an example Fission deployment of the zip, from a separate workflow step: a `Package` (URL of the zip and its sha256), `Function` (`main.main`, newdeploy, scale to zero) and `HTTPTrigger` (`/test-package`) |
 
 The URL is the release asset, so the repository has to be public for the cluster to fetch it without credentials.
 
@@ -43,19 +47,25 @@ The URL is the release asset, so the repository has to be public for the cluster
 
 ### Pruning
 
-Pruning is automatic. Each push to `main` publishes its `dev-<sha>` pre-release and then runs `scripts/prune-dev-releases.sh`, which keeps the newest `KEEP_DEV_RELEASES` (5, set in the workflow) and deletes the rest together with their tags. It only ever selects pre-releases whose tag starts with `dev-`; `v*` releases (including `v*-rc` pre-releases) are never touched.
+Pruning is automatic. Each push to `main` publishes its `dev-<sha>` pre-release and then runs `.github/scripts/prune-dev-releases.sh`, which keeps the newest `KEEP_DEV_RELEASES` (5, set in the workflow) and deletes the rest together with their tags. It only ever selects pre-releases whose tag starts with `dev-`; `v*` releases (including `v*-rc` pre-releases) are never touched.
 
 Because old dev builds disappear, a Package that still points at a pruned `dev-<sha>` URL can't fetch its code the next time Fission starts a pod for it. Apply a newer `package.yaml`, or tag a `v*` release for anything that has to stay deployed.
 
-To prune by hand, or to keep a different number: `scripts/prune-dev-releases.sh 3`.
+To prune by hand, or to keep a different number: `.github/scripts/prune-dev-releases.sh 3`.
 
 ## Building locally
 
 ```bash
-GITHUB_REPOSITORY=owner/repo ./build.sh v0.0.0-local
+./build.sh v0.0.0-local
 ```
 
-Needs `python` (with `pip`), `zip` and `shasum`. Set `FISSION_NAMESPACE` and `FISSION_ENVIRONMENT` (defaults `services` and `python`) to change what goes into `package.yaml`.
+Needs `python` (with `pip`), `zip` and `shasum`. To also render the Fission manifest for that build:
+
+```bash
+GITHUB_REPOSITORY=owner/repo .github/scripts/build-fission-package.sh v0.0.0-local
+```
+
+Set `FISSION_NAMESPACE` and `FISSION_ENVIRONMENT` (defaults `services` and `python`) to change what goes into `package.yaml`.
 
 ## Notes
 
