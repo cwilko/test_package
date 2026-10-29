@@ -44,6 +44,11 @@ kind: HTTPTrigger
 metadata:
   name: __NAME__
   namespace: __NAMESPACE__
+  # Endpoint metadata read by the catalog on the cluster; the openapi asset is published with the same release
+  annotations:
+    catalog.squirrelhome.co.uk/description: Demo function that returns a plain-text status line (Python version and a humanize-formatted size)
+    catalog.squirrelhome.co.uk/kind: rest
+    catalog.squirrelhome.co.uk/openapi: __OPENAPI_URL__
 spec:
   relativeurl: /__NAME__
   method: GET

@@ -17,6 +17,8 @@ concurrency:
 env:
   # how many dev-<sha> pre-releases to keep; older ones are deleted (with their tags) after each new one is published
   KEEP_DEV_RELEASES: 5
+  # public base URL the function is served from; goes in the servers block of the published openapi.yaml
+  API_BASE_URL: https://api.squirrelhome.co.uk
 
 jobs:
   build:

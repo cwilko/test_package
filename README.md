@@ -9,8 +9,9 @@ A small Python function packaged for [Fission](https://fission.io), used to try 
 Release automation lives under `.github/`, apart from the package itself:
 
 - `.github/workflows/release.yml` - builds on every push and pull request, and publishes a release or pre-release (see below)
-- `.github/scripts/build-fission-package.sh` - renders `dist/package.yaml` from the zip and checksum that `build.sh` produced
-- `.github/fission/package.yaml.tmpl` - template for the Fission Package, Function and HTTPTrigger
+- `.github/scripts/build-fission-package.sh` - renders `dist/package.yaml` from the zip and checksum that `build.sh` produced, and renders the spec to `dist/openapi.yaml`
+- `.github/fission/package.yaml.tmpl` - template for the Fission Package, Function and HTTPTrigger, including the catalog annotations
+- `.github/fission/openapi.yaml` - template for the endpoint's OpenAPI document, rendered and published as a release asset (the server URL is `API_BASE_URL` in `release.yml`)
 - `.github/scripts/prune-dev-releases.sh` - deletes old development pre-releases (see below)
 
 ## What gets published
@@ -28,6 +29,7 @@ Every build has its own URL and its own checksum, so a Package pointing at a bui
 | `test-package-<version>.zip` | `main.py` plus the vendored dependencies at the zip root |
 | `test-package-<version>.zip.sha256` | the checksum |
 | `package.yaml` | an example Fission deployment of the zip, from a separate workflow step: a `Package` (URL of the zip and its sha256), `Function` (`main.main`, newdeploy, scale to zero) and `HTTPTrigger` (`/test-package`) |
+| `openapi.yaml` | the OpenAPI document for `/test-package`; the `HTTPTrigger` in `package.yaml` links to it through its `catalog.squirrelhome.co.uk/openapi` annotation |
 
 The URL is the release asset, so the repository has to be public for the cluster to fetch it without credentials.
 
@@ -62,7 +64,7 @@ To prune by hand, or to keep a different number: `.github/scripts/prune-dev-rele
 Needs `python` (with `pip`), `zip` and `shasum`. To also render the Fission manifest for that build:
 
 ```bash
-GITHUB_REPOSITORY=owner/repo .github/scripts/build-fission-package.sh v0.0.0-local
+GITHUB_REPOSITORY=owner/repo API_BASE_URL=https://api.example.com .github/scripts/build-fission-package.sh v0.0.0-local
 ```
 
 Set `FISSION_NAMESPACE` and `FISSION_ENVIRONMENT` (defaults `services` and `python`) to change what goes into `package.yaml`.
